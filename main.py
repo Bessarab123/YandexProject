@@ -8,6 +8,7 @@ import sys
 import PyQt5
 from pprint import pprint
 import requests
+from mymap import My_Map
 
 address_ll = input()
 
