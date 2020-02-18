@@ -70,7 +70,7 @@ class MyMap(QDialog, Ui_Dialog):
         self.label.setPixmap(p)
 
 
-address_ll = (37.575636, 54.171069)
+address_ll = list(map(float, input('формат вводных данных: 37.575636,54.171069\n').split(',')))
 size = '650,450'
 map_params = {
     "l": 'map',
