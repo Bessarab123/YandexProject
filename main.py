@@ -3,7 +3,7 @@ import sys
 import requests
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QPixmap
-from PyQt5.QtWidgets import QApplication, QDialog
+from PyQt5.QtWidgets import QApplication, QDialog, QAbstractButton
 from Widget import Ui_Dialog
 
 
@@ -19,6 +19,8 @@ class MyMap(QDialog, Ui_Dialog):
         buf = bts.getbuffer()
         p.loadFromData(buf)
         self.label.setPixmap(p)
+
+        self.buttonGroup.buttonClicked.connect(self.change_map_sloi)
 
     def keyPressEvent(self, event):
         if event.key() == Qt.Key_PageUp:
@@ -50,7 +52,14 @@ class MyMap(QDialog, Ui_Dialog):
         pass
 
     def change_map_sloi(self):
-        pass
+        text = self.buttonGroup.checkedButton().text()
+        if text == 'Гибрид':
+            map_params['l'] = 'sat,skl'
+        elif text == 'Схема':
+            map_params['l'] = 'map'
+        elif text == 'Спутник':
+            map_params['l'] = 'sat'
+        self.update_im()
 
     def search(self):
         values = self.lineEdit.text()
