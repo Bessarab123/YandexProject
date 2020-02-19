@@ -1,5 +1,7 @@
 import io
 import sys
+from pprint import pprint
+
 import requests
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QPixmap
@@ -10,7 +12,7 @@ from Widget import Ui_Dialog
 class MyMap(QDialog, Ui_Dialog):
     def __init__(self):
         while True:
-            coor, boo = QInputDialog.getText(None, "Введите координаты", "Формат 37.575636,54.171069")
+            coor, boo = '37.575636,54.171069', True  # QInputDialog.getText(None, "Введите координаты", "Формат 37.575636,54.171069")
             if boo:
                 try:
                     coor = list(map(float, coor.split(',')))
@@ -54,24 +56,24 @@ class MyMap(QDialog, Ui_Dialog):
             self.change_centre_coords('Right')
 
     def change_mashtab(self, s):
+        coor = list(map(float, map_params['spn'].split(',')))
         if s == 'Up':
-            map_params['z'] += 1 if map_params['z'] != 19 else 0
-            self.k /= 2
+            coor[0] *= 2
         else:
-            map_params['z'] -= 1 if map_params['z'] != 0 else 0
-            self.k *= 2
+            coor[1] /= 2
+        map_params['spn'] = ','.join(list(map(str, coor)))
         self.update_im()
 
     def change_centre_coords(self, s):
         coor = list(map(float, map_params['ll'].split(',')))
         if s == "Up":
-            coor[1] += 0.011 * self.k
+            coor[1] += float(map_params['spn'].split(',')[1]) * 2
         elif s == "Down":
-            coor[1] -= 0.011 * self.k
+            coor[1] -= float(map_params['spn'].split(',')[1]) * 2
         elif s == "Left":
-            coor[0] -= 0.011 * self.k
+            coor[0] -= float(map_params['spn'].split(',')[0]) * 2
         elif s == "Right":
-            coor[0] += 0.011 * self.k
+            coor[0] += float(map_params['spn'].split(',')[0]) * 2
         if -180 <= coor[0] <= 180 and -85 <= coor[1] <= 85:
             map_params['ll'] = ','.join(list(map(str, coor)))
             self.update_im()
@@ -96,11 +98,18 @@ class MyMap(QDialog, Ui_Dialog):
                 json = response.json()
                 geo_object = json["response"]["GeoObjectCollection"]["featureMember"][0]["GeoObject"]
                 pos = ','.join(geo_object['Point']['pos'].split())
+                envelope = json["response"]["GeoObjectCollection"][
+                    "featureMember"][0]["GeoObject"]['boundedBy']['Envelope']
+                low = envelope['lowerCorner'].split()
+                upp = envelope['upperCorner'].split()
+
+                print(low, upp)
             except Exception:
                 self.lineEdit.setText('Адресс не действителен')
                 return
             map_params['pt'] = pos + ',round'
             map_params['ll'] = pos
+            map_params['spn'] = f"{abs(float(upp[0]) - float(low[0])) / 2},{abs(float(upp[1]) - float(low[1])) / 2}"
             self.search_bool = True
             self.update_im()
 
@@ -134,7 +143,7 @@ map_params = {
     "l": 'map',
     "ll": None,
     'size': '450,450',
-    'z': 15,
+    'spn': None,
     'pt': None}
 
 geocoder_api_server = "http://geocode-maps.yandex.ru/1.x/"
