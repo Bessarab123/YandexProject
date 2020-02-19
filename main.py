@@ -13,7 +13,8 @@ class MyMap(QDialog, Ui_Dialog):
             coor, boo = QInputDialog.getText(None, "Введите координаты", "Формат 37.575636,54.171069")
             if boo:
                 try:
-                    list(map(float, coor.split(',')))
+                    if len(list(map(float, coor.split(',')))) != 2:
+                        raise IndexError
                     map_params["ll"] = coor
                     break
                 except Exception:
@@ -85,14 +86,18 @@ class MyMap(QDialog, Ui_Dialog):
         geocoder_params['geocode'] = self.lineEdit.text()
         response = requests.get(geocoder_api_server, params=geocoder_params)
         if not response:
-            self.lineEdit.setText('Не удалось найти по адрессу: ' + geocoder_params['geocode'])
+            self.lineEdit.setText('Адресс не действителен')
         else:
-            self.search_bool = True
-            json = response.json()
-            geo_object = json["response"]["GeoObjectCollection"]["featureMember"][0]["GeoObject"]
-            pos = ','.join(geo_object['Point']['pos'].split())
+            try:
+                json = response.json()
+                geo_object = json["response"]["GeoObjectCollection"]["featureMember"][0]["GeoObject"]
+                pos = ','.join(geo_object['Point']['pos'].split())
+            except Exception:
+                self.lineEdit.setText('Адресс не действителен')
+                return
             map_params['pt'] = pos + ',round'
             map_params['ll'] = pos
+            self.search_bool = True
             self.update_im()
 
     def discharge(self):
