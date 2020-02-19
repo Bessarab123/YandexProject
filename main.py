@@ -89,6 +89,7 @@ class MyMap(QDialog, Ui_Dialog):
     def search(self):
         geocoder_params['geocode'] = self.lineEdit.text()
         response = requests.get(geocoder_api_server, params=geocoder_params)
+
         if not response:
             self.lineEdit.setText('Адресс не действителен')
         else:
@@ -99,43 +100,55 @@ class MyMap(QDialog, Ui_Dialog):
             except Exception:
                 self.lineEdit.setText('Адресс не действителен')
                 return
+
             map_params['pt'] = pos + ',round'
             map_params['ll'] = pos
             self.search_bool = True
             self.update_im()
-            self.full_address()
+            self.address_postal()
 
     def discharge(self):
         if self.search_bool:
             map_params['pt'] = None
         self.search_bool = False
         self.lineEdit.setText('')
+        self.lineEdit_2.setText('')
         self.update_im()
 
     def update_im(self):
         response = requests.get(map_api_server, params=map_params)
+
         if not response:
             print(response.url)
             print("Ошибка выполнения запроса:")
             print("Http статус:", response.status_code, "(", response.reason, ")")
             sys.exit(1)
+
         p = QPixmap()
         buf = (io.BytesIO(response.content)).getbuffer()
         p.loadFromData(buf)
         self.label.setPixmap(p)
 
-    def full_address(self):
-        response = requests.get(map_api_server, params=map_params)
-        if not response:
+    def address_postal(self):
+        geocoder_params['geocode'] = self.lineEdit.text()
+        response = requests.get(geocoder_api_server, params=geocoder_params)
+
+        try:
+            json = response.json()
+            geo_object = json["response"]["GeoObjectCollection"]["featureMember"][0]["GeoObject"]
+            address = geo_object['metaDataProperty']['GeocoderMetaData']['Address']['formatted']
+            postal_code = geo_object['metaDataProperty']['GeocoderMetaData']['Address']['postal_code']
+            address_code = address + ' | ' + postal_code
+
+            text = self.buttonGroup_2.checkedButton().text()
+            if text == 'Отоброжать почтовый индекс':
+                self.lineEdit_2.setText(address_code)
+            elif text == 'Не отображать почтовый индекс':
+                self.lineEdit_2.setText(address)
+
+        except Exception:
             self.lineEdit_2.setText('Не удалось вывести адрес')
-        else:
-            try:
-                json = response.json()
-                geo_object = json["response"]["GeoObjectCollection"]["featureMember"][0]["GeoObject"]
-                self.lineEdit.setText(geo_object)
-            except Exception:
-                self.lineEdit_2.setText('Не удалось вывести адрес')
-                return
+            return
 
 
 geocoder_params = {
