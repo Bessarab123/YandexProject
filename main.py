@@ -103,6 +103,7 @@ class MyMap(QDialog, Ui_Dialog):
             map_params['ll'] = pos
             self.search_bool = True
             self.update_im()
+            self.full_address()
 
     def discharge(self):
         if self.search_bool:
@@ -122,6 +123,19 @@ class MyMap(QDialog, Ui_Dialog):
         buf = (io.BytesIO(response.content)).getbuffer()
         p.loadFromData(buf)
         self.label.setPixmap(p)
+
+    def full_address(self):
+        response = requests.get(map_api_server, params=map_params)
+        if not response:
+            self.lineEdit_2.setText('Не удалось вывести адрес')
+        else:
+            try:
+                json = response.json()
+                geo_object = json["response"]["GeoObjectCollection"]["featureMember"][0]["GeoObject"]
+                self.lineEdit.setText(geo_object)
+            except Exception:
+                self.lineEdit_2.setText('Не удалось вывести адрес')
+                return
 
 
 geocoder_params = {
