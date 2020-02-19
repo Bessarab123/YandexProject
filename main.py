@@ -91,20 +91,19 @@ class MyMap(QDialog, Ui_Dialog):
             json = response.json()
             geo_object = json["response"]["GeoObjectCollection"]["featureMember"][0]["GeoObject"]
             pos = ','.join(geo_object['Point']['pos'].split())
-            self.search_params = add_dict(map_params.copy(), {'ll': pos, 'pt': pos + ',round'})
+            map_params['pt'] = pos + ',round'
+            map_params['ll'] = pos
             self.update_im()
 
     def discharge(self):
         if self.search_bool:
-            map_params['ll'] = self.search_params['ll']
+            map_params['pt'] = None
         self.search_bool = False
+        self.lineEdit.setText('')
         self.update_im()
 
     def update_im(self):
-        if self.search_bool:
-            response = requests.get(map_api_server, params=self.search_params)
-        else:
-            response = requests.get(map_api_server, params=map_params)
+        response = requests.get(map_api_server, params=map_params)
         if not response:
             print(response.url)
             print("Ошибка выполнения запроса:")
@@ -114,12 +113,6 @@ class MyMap(QDialog, Ui_Dialog):
         buf = (io.BytesIO(response.content)).getbuffer()
         p.loadFromData(buf)
         self.label.setPixmap(p)
-
-
-def add_dict(dic1, dic2):
-    for key in dic2.keys():
-        dic1[key] = dic2[key]
-    return dic1
 
 
 geocoder_params = {
@@ -132,7 +125,8 @@ map_params = {
     "l": 'map',
     "ll": None,
     'size': '650,450',
-    'z': 15}
+    'z': 15,
+    'pt': None}
 
 geocoder_api_server = "http://geocode-maps.yandex.ru/1.x/"
 map_api_server = "http://static-maps.yandex.ru/1.x/"
