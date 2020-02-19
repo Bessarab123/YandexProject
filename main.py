@@ -26,6 +26,9 @@ class MyMap(QDialog, Ui_Dialog):
         self.pushButton.clicked.connect(self.search)
         self.pushButton_2.clicked.connect(self.discharge)
         self.buttonGroup.buttonClicked.connect(self.change_map_sloi)
+
+        self.search_bool = False
+
         self.update_im()
 
     def keyPressEvent(self, event):
@@ -64,8 +67,9 @@ class MyMap(QDialog, Ui_Dialog):
             coor[0] -= (20 - map_params['z']) * 0.005
         elif s == "Right":
             coor[0] += (20 - map_params['z']) * 0.005
-        map_params['ll'] = ','.join(list(map(str, coor)))
-        self.update_im()
+        if -180 < coor[0] < 180 and -90 < coor[1] < 90:
+            map_params['ll'] = ','.join(list(map(str, coor)))
+            self.update_im()
 
     def change_map_sloi(self):
         text = self.buttonGroup.checkedButton().text()
@@ -78,13 +82,29 @@ class MyMap(QDialog, Ui_Dialog):
         self.update_im()
 
     def search(self):
-        values = self.lineEdit.text()
+        geocoder_params['geocode'] = self.lineEdit.text()
+        response = requests.get(geocoder_api_server, params=geocoder_params)
+        if not response:
+            self.lineEdit.setText('Не удалось найти по адрессу: ' + geocoder_params['geocode'])
+        else:
+            self.search_bool = True
+            json = response.json()
+            geo_object = json["response"]["GeoObjectCollection"]["featureMember"][0]["GeoObject"]
+            pos = ','.join(geo_object['Point']['pos'].split())
+            self.search_params = add_dict(map_params.copy(), {'ll': pos, 'pt': pos + ',round'})
+            self.update_im()
 
     def discharge(self):
-        pass
+        if self.search_bool:
+            map_params['ll'] = self.search_params['ll']
+        self.search_bool = False
+        self.update_im()
 
     def update_im(self):
-        response = requests.get(map_api_server, params=map_params)
+        if self.search_bool:
+            response = requests.get(map_api_server, params=self.search_params)
+        else:
+            response = requests.get(map_api_server, params=map_params)
         if not response:
             print(response.url)
             print("Ошибка выполнения запроса:")
@@ -96,6 +116,17 @@ class MyMap(QDialog, Ui_Dialog):
         self.label.setPixmap(p)
 
 
+def add_dict(dic1, dic2):
+    for key in dic2.keys():
+        dic1[key] = dic2[key]
+    return dic1
+
+
+geocoder_params = {
+    'apikey': '40d1649f-0493-4b70-98ba-98533de7710b',
+    'geocode': None,
+    'format': 'json'
+}
 map_params = {
     "apikey": "40d1649f-0493-4b70-98ba-98533de7710b",
     "l": 'map',
@@ -103,6 +134,7 @@ map_params = {
     'size': '650,450',
     'z': 15}
 
+geocoder_api_server = "http://geocode-maps.yandex.ru/1.x/"
 map_api_server = "http://static-maps.yandex.ru/1.x/"
 
 if __name__ == '__main__':
