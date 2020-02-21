@@ -9,28 +9,18 @@ from Widget import Ui_Dialog
 
 class MyMap(QDialog, Ui_Dialog):
     def __init__(self):
-        while True:
-            coor, boo = QInputDialog.getText(None, "Введите координаты", "Формат 37.575636,54.171069")
-            if boo:
-                try:
-                    coor = list(map(float, coor.split(',')))
-                    if len(coor) != 2 or not (-180 <= coor[0] <= 180) or not (-85 <= coor[1] <= 85):
-                        raise IndexError
-                    map_params["ll"] = ','.join(list(map(str, coor)))
-                    break
-                except Exception:
-                    pass
-            else:
-                sys.exit()
         super().__init__()
         self.setupUi(self)
-
+        self.radioButton_yes.setChecked(True)
         self.pushButton.clicked.connect(self.search)
         self.pushButton_2.clicked.connect(self.discharge)
         self.buttonGroup.buttonClicked.connect(self.change_map_sloi)
+        self.buttonGroup_2.buttonClicked.connect(self.change_edit_line_2)
 
         self.search_bool = False
         self.k = 1
+        self.address = None
+        self.address_code = None
 
         self.update_im()
 
@@ -105,12 +95,14 @@ class MyMap(QDialog, Ui_Dialog):
             map_params['ll'] = pos
             self.search_bool = True
             self.update_im()
-            self.address_postal()
+            self.address_postal(geo_object)
 
     def discharge(self):
         if self.search_bool:
             map_params['pt'] = None
         self.search_bool = False
+        self.address = None
+        self.address_code = None
         self.lineEdit.setText('')
         self.lineEdit_2.setText('')
         self.update_im()
@@ -129,26 +121,30 @@ class MyMap(QDialog, Ui_Dialog):
         p.loadFromData(buf)
         self.label.setPixmap(p)
 
-    def address_postal(self):
-        geocoder_params['geocode'] = self.lineEdit.text()
-        response = requests.get(geocoder_api_server, params=geocoder_params)
-
+    def address_postal(self, geo_object):
         try:
-            json = response.json()
-            geo_object = json["response"]["GeoObjectCollection"]["featureMember"][0]["GeoObject"]
-            address = geo_object['metaDataProperty']['GeocoderMetaData']['Address']['formatted']
+            self.address = geo_object['metaDataProperty']['GeocoderMetaData']['Address']['formatted']
             postal_code = geo_object['metaDataProperty']['GeocoderMetaData']['Address']['postal_code']
-            address_code = address + ' | ' + postal_code
+            self.address_code = self.address + ' | ' + postal_code
 
             text = self.buttonGroup_2.checkedButton().text()
             if text == 'Отоброжать почтовый индекс':
-                self.lineEdit_2.setText(address_code)
+                self.lineEdit_2.setText(self.address_code)
             elif text == 'Не отображать почтовый индекс':
-                self.lineEdit_2.setText(address)
+                self.lineEdit_2.setText(self.address)
 
         except Exception:
             self.lineEdit_2.setText('Не удалось вывести адрес')
+            self.address = None
+            self.address_code = None
             return
+
+    def change_edit_line_2(self):
+        text = self.buttonGroup_2.checkedButton().text()
+        if text == 'Отоброжать почтовый индекс' and self.address_code:
+            self.lineEdit_2.setText(self.address_code)
+        elif text == 'Не отображать почтовый индекс' and self.address:
+            self.lineEdit_2.setText(self.address)
 
 
 geocoder_params = {
@@ -159,9 +155,9 @@ geocoder_params = {
 map_params = {
     "apikey": "40d1649f-0493-4b70-98ba-98533de7710b",
     "l": 'map',
-    "ll": None,
+    "ll": '0,0',
     'size': '450,450',
-    'z': 15,
+    'z': 1,
     'pt': None}
 
 geocoder_api_server = "http://geocode-maps.yandex.ru/1.x/"
